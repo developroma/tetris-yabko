@@ -6,10 +6,18 @@
     <title>Tetris Yabko</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --bg-color: #2c3e50;
+            --ui-bg: rgba(44, 62, 80, 0.95);
+            --accent: #f1c40f;
+            --btn-green: #27ae60;
+            --btn-blue: #2980b9;
+        }
+
         body {
-            background-color: #2c3e50;
+            background-color: var(--bg-color);
             color: white;
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -17,133 +25,190 @@
             height: 100vh;
             margin: 0;
             overflow: hidden;
-            touch-action: none; /* Вимикає стандартні жести браузера */
+            touch-action: none; /* Вимикає скрол і зум */
         }
+
+        /* CANVAS */
         canvas {
-            border: 2px solid #ecf0f1;
-            background-color: #34495e;
-            display: block;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border: 2px solid #34495e;
+            background-color: #000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            display: none; /* Сховано до старту */
+            max-height: 65vh; /* Щоб влізло на екран разом з кнопками */
+            width: auto;
         }
-        #score-board {
-            font-size: 24px;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-        #controls {
-            margin-top: 20px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            width: 100%;
-            max-width: 300px;
-        }
-        .btn {
-            background-color: #e74c3c;
-            border: none;
-            border-radius: 10px;
-            padding: 20px;
-            color: white;
-            font-size: 24px;
-            touch-action: manipulation;
-            user-select: none;
-            active: opacity: 0.8;
-        }
-        .btn:active {
-            background-color: #c0392b;
-        }
-        #btn-rotate { grid-column: 2; background-color: #f1c40f; color: #333; }
-        #btn-down { grid-column: 2; }
-        #game-over {
+
+        /* ЕКРАНИ (СТАРТ / КІНЕЦЬ) */
+        #start-screen, #game-over {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.9);
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            display: none;
-            z-index: 10;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--ui-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            transition: opacity 0.3s;
         }
+
+        #game-over { display: none; }
+
+        h1 { font-size: 40px; margin: 0 0 20px 0; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px #000; }
+        h2 { font-size: 30px; margin-bottom: 10px; }
+
+        .stat-box {
+            background: rgba(255,255,255,0.1);
+            padding: 15px 30px;
+            border-radius: 15px;
+            margin: 10px;
+            text-align: center;
+            min-width: 150px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stat-label { font-size: 14px; color: #bdc3c7; text-transform: uppercase; margin-bottom: 5px; }
+        .stat-value { font-size: 32px; font-weight: bold; color: #fff; }
+
         button.main-btn {
-            background: #27ae60;
+            background: var(--btn-green);
             color: white;
             border: none;
-            padding: 15px 30px;
-            font-size: 18px;
-            border-radius: 8px;
-            margin-top: 15px;
+            padding: 15px 50px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50px;
+            margin-top: 30px;
             cursor: pointer;
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+            transition: transform 0.1s, background 0.2s;
         }
+        button.main-btn:active { transform: scale(0.95); background: #219150; }
+        button.secondary-btn { background: var(--btn-blue); margin-top: 15px; font-size: 16px; padding: 12px 30px; box-shadow: 0 5px 15px rgba(41, 128, 185, 0.4); }
+
+        /* РАХУНОК В ГРІ */
+        #score-board {
+            display: none;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            background: rgba(0,0,0,0.3);
+            padding: 5px 20px;
+            border-radius: 20px;
+        }
+
+        /* МОБІЛЬНЕ КЕРУВАННЯ */
+        #controls {
+            margin-top: 15px;
+            display: none; /* Сховано до старту */
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: auto auto;
+            gap: 10px;
+            width: 90%;
+            max-width: 320px;
+        }
+
+        .btn {
+            background-color: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            height: 60px;
+            color: white;
+            font-size: 28px;
+            display: flex; align-items: center; justify-content: center;
+            user-select: none;
+            touch-action: manipulation;
+            transition: background 0.1s;
+        }
+        .btn:active { background-color: rgba(255, 255, 255, 0.4); }
+        
+        #btn-rotate { grid-column: 2; background-color: rgba(241, 196, 15, 0.3); border-color: var(--accent); color: var(--accent); }
+        #btn-down { grid-column: 2; grid-row: 2; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-right { grid-column: 3; grid-row: 2; }
+
     </style>
 </head>
 <body>
 
-    <div id="score-board">Рахунок: <span id="score">0</span></div>
-    
+    <div id="start-screen">
+        <h1>Tetris 2000</h1>
+        <div class="stat-box">
+            <div class="stat-label">Рекорд</div>
+            <div class="stat-value" id="best-score-display">0</div>
+        </div>
+        <div class="stat-label" style="margin-top: 10px" id="mode-display">Mode: Classic</div>
+        <button class="main-btn" onclick="startGame()">ГРАТИ</button>
+    </div>
+
+    <div id="score-board">💎 <span id="score">0</span></div>
     <canvas id="tetris" width="240" height="400"></canvas>
 
     <div id="controls">
+        <div></div>
+        <button class="btn" id="btn-rotate">↻</button>
+        <div></div>
         <button class="btn" id="btn-left">⬅️</button>
-        <button class="btn" id="btn-rotate">🔄</button>
-        <button class="btn" id="btn-right">➡️</button>
-        <div></div>
         <button class="btn" id="btn-down">⬇️</button>
-        <div></div>
+        <button class="btn" id="btn-right">➡️</button>
     </div>
 
     <div id="game-over">
-        <h2>Гру закінчено!</h2>
-        <p>Твій рахунок: <span id="final-score">0</span></p>
-        <button class="main-btn" onclick="sendScoreAndClose()">Зберегти та Вийти</button>
-        <br><br>
-        <button class="main-btn" style="background:#3498db" onclick="resetGame()">Зіграти ще</button>
+        <h2>GAME OVER</h2>
+        <div class="stat-box">
+            <div class="stat-label">Твій рахунок</div>
+            <div class="stat-value" id="final-score">0</div>
+        </div>
+        <button class="main-btn" onclick="sendScoreAndClose()">Зберегти</button>
+        <button class="main-btn secondary-btn" onclick="location.reload()">Зіграти ще</button>
     </div>
 
 <script>
+    // --- ІНІЦІАЛІЗАЦІЯ TELEGRAM ---
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Розгортаємо на весь екран
+    tg.disableVerticalSwipes(); // Забороняємо свайпи (щоб не закрити випадково)
+
+    // Отримуємо дані з URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameType = urlParams.get('type') || 'classic';
+    const bestScore = urlParams.get('best') || 0;
+
+    // Налаштовуємо UI
+    document.getElementById('best-score-display').innerText = bestScore;
+    document.getElementById('mode-display').innerText = `Mode: ${gameType.toUpperCase()}`;
+
+    // --- НАЛАШТУВАННЯ ГРИ ---
     const canvas = document.getElementById('tetris');
     const context = canvas.getContext('2d');
     const scoreElement = document.getElementById('score');
-    const finalScoreElement = document.getElementById('final-score');
-    const gameOverModal = document.getElementById('game-over');
+    
+    context.scale(20, 20); // Масштабуємо (240/20 = 12 блоків ширини, 400/20 = 20 блоків висоти)
 
-    context.scale(20, 20);
+    // Кольори фігур
+    const colors = [
+        null,
+        '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF',
+        '#FF8E0D', '#FFE138', '#3877FF',
+    ];
 
-    // Ініціалізація Telegram WebApp
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // Розгортаємо на весь екран
+    // Логіка швидкості
+    let dropInterval = 1000;
+    if (gameType === 'speed') dropInterval = 400;
+    if (gameType === 'hard') dropInterval = 200;
 
-    // Логіка Тетріса
-    function arenaSweep() {
-        let rowCount = 1;
-        outer: for (let y = arena.length - 1; y > 0; --y) {
-            for (let x = 0; x < arena[y].length; ++x) {
-                if (arena[y][x] === 0) {
-                    continue outer;
-                }
-            }
-            const row = arena.splice(y, 1)[0].fill(0);
-            arena.unshift(row);
-            ++y;
-            player.score += rowCount * 10;
-            rowCount *= 2;
-        }
-    }
+    let dropCounter = 0;
+    let lastTime = 0;
+    let isPaused = true;
 
-    function collide(arena, player) {
-        const [m, o] = [player.matrix, player.pos];
-        for (let y = 0; y < m.length; ++y) {
-            for (let x = 0; x < m[y].length; ++x) {
-                if (m[y][x] !== 0 &&
-                   (arena[y + o.y] &&
-                    arena[y + o.y][x + o.x]) !== 0) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
+    const arena = createMatrix(12, 20);
+    
+    const player = {
+        pos: {x: 0, y: 0},
+        matrix: null,
+        score: 0,
+    };
+
+    // --- ФУНКЦІЇ ДВИГУНА ---
 
     function createMatrix(w, h) {
         const matrix = [];
@@ -154,54 +219,20 @@
     }
 
     function createPiece(type) {
-        if (type === 'I') {
-            return [
-                [0, 1, 0, 0],
-                [0, 1, 0, 0],
-                [0, 1, 0, 0],
-                [0, 1, 0, 0],
-            ];
-        } else if (type === 'L') {
-            return [
-                [0, 2, 0],
-                [0, 2, 0],
-                [0, 2, 2],
-            ];
-        } else if (type === 'J') {
-            return [
-                [0, 3, 0],
-                [0, 3, 0],
-                [3, 3, 0],
-            ];
-        } else if (type === 'O') {
-            return [
-                [4, 4],
-                [4, 4],
-            ];
-        } else if (type === 'Z') {
-            return [
-                [5, 5, 0],
-                [0, 5, 5],
-                [0, 0, 0],
-            ];
-        } else if (type === 'S') {
-            return [
-                [0, 6, 6],
-                [6, 6, 0],
-                [0, 0, 0],
-            ];
-        } else if (type === 'T') {
-            return [
-                [0, 7, 0],
-                [7, 7, 7],
-                [0, 0, 0],
-            ];
-        }
+        if (type === 'I') return [[0, 1, 0, 0],[0, 1, 0, 0],[0, 1, 0, 0],[0, 1, 0, 0]];
+        if (type === 'L') return [[0, 2, 0],[0, 2, 0],[0, 2, 2]];
+        if (type === 'J') return [[0, 3, 0],[0, 3, 0],[3, 3, 0]];
+        if (type === 'O') return [[4, 4],[4, 4]];
+        if (type === 'Z') return [[5, 5, 0],[0, 5, 5],[0, 0, 0]];
+        if (type === 'S') return [[0, 6, 6],[6, 6, 0],[0, 0, 0]];
+        if (type === 'T') return [[0, 7, 0],[7, 7, 7],[0, 0, 0]];
     }
 
     function draw() {
-        context.fillStyle = '#34495e'; // Колір фону
+        // Очищення
+        context.fillStyle = '#000';
         context.fillRect(0, 0, canvas.width, canvas.height);
+
         drawMatrix(arena, {x: 0, y: 0});
         drawMatrix(player.matrix, player.pos);
     }
@@ -212,27 +243,75 @@
                 if (value !== 0) {
                     context.fillStyle = colors[value];
                     context.fillRect(x + offset.x, y + offset.y, 1, 1);
+                    // Ефект об'єму
                     context.lineWidth = 0.05;
-                    context.strokeStyle = 'white';
+                    context.strokeStyle = 'rgba(255,255,255,0.5)';
                     context.strokeRect(x + offset.x, y + offset.y, 1, 1);
                 }
             });
         });
     }
 
-    const colors = [
-        null,
-        '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF',
-        '#FF8E0D', '#FFE138', '#3877FF',
-    ];
+    function merge(arena, player) {
+        player.matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) {
+                    arena[y + player.pos.y][x + player.pos.x] = value;
+                }
+            });
+        });
+    }
 
-    const arena = createMatrix(12, 20);
+    function rotate(matrix, dir) {
+        for (let y = 0; y < matrix.length; ++y) {
+            for (let x = 0; x < y; ++x) {
+                [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+            }
+        }
+        if (dir > 0) matrix.forEach(row => row.reverse());
+        else matrix.reverse();
+    }
 
-    const player = {
-        pos: {x: 0, y: 0},
-        matrix: null,
-        score: 0,
-    };
+    function collide(arena, player) {
+        const m = player.matrix;
+        const o = player.pos;
+        for (let y = 0; y < m.length; ++y) {
+            for (let x = 0; x < m[y].length; ++x) {
+                if (m[y][x] !== 0 &&
+                   (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function arenaSweep() {
+        let rowCount = 1;
+        outer: for (let y = arena.length - 1; y > 0; --y) {
+            for (let x = 0; x < arena[y].length; ++x) {
+                if (arena[y][x] === 0) continue outer;
+            }
+            const row = arena.splice(y, 1)[0].fill(0);
+            arena.unshift(row);
+            ++y;
+
+            player.score += rowCount * 10;
+            rowCount *= 2;
+        }
+        scoreElement.innerText = player.score;
+    }
+
+    function playerReset() {
+        const pieces = 'ILJOTSZ';
+        player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
+        player.pos.y = 0;
+        player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+
+        if (collide(arena, player)) {
+            gameOver();
+        }
+    }
 
     function playerDrop() {
         player.pos.y++;
@@ -241,7 +320,6 @@
             merge(arena, player);
             playerReset();
             arenaSweep();
-            updateScore();
         }
         dropCounter = 0;
     }
@@ -250,18 +328,6 @@
         player.pos.x += dir;
         if (collide(arena, player)) {
             player.pos.x -= dir;
-        }
-    }
-
-    function playerReset() {
-        const pieces = 'ILJOTSZ';
-        player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
-        player.pos.y = 0;
-        player.pos.x = (arena[0].length / 2 | 0) -
-                       (player.matrix[0].length / 2 | 0);
-        
-        if (collide(arena, player)) {
-            gameOver();
         }
     }
 
@@ -280,96 +346,75 @@
         }
     }
 
-    function rotate(matrix, dir) {
-        for (let y = 0; y < matrix.length; ++y) {
-            for (let x = 0; x < y; ++x) {
-                [
-                    matrix[x][y],
-                    matrix[y][x],
-                ] = [
-                    matrix[y][x],
-                    matrix[x][y],
-                ];
-            }
-        }
-        if (dir > 0) {
-            matrix.forEach(row => row.reverse());
-        } else {
-            matrix.reverse();
-        }
-    }
-
-    function merge(arena, player) {
-        player.matrix.forEach((row, y) => {
-            row.forEach((value, x) => {
-                if (value !== 0) {
-                    arena[y + player.pos.y][x + player.pos.x] = value;
-                }
-            });
-        });
-    }
-
-    let dropCounter = 0;
-    let dropInterval = 1000;
-    let lastTime = 0;
-    let isPaused = false;
-
     function update(time = 0) {
         if (isPaused) return;
-
+        
         const deltaTime = time - lastTime;
         lastTime = time;
+        
         dropCounter += deltaTime;
         if (dropCounter > dropInterval) {
             playerDrop();
         }
+        
         draw();
         requestAnimationFrame(update);
     }
 
-    function updateScore() {
-        scoreElement.innerText = player.score;
+    // --- УПРАВЛІННЯ ГРОЮ ---
+
+    function startGame() {
+        document.getElementById('start-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('tetris').style.display = 'block';
+            document.getElementById('controls').style.display = 'grid';
+            document.getElementById('score-board').style.display = 'block';
+            
+            playerReset();
+            player.score = 0;
+            scoreElement.innerText = 0;
+            isPaused = false;
+            update();
+        }, 300);
     }
 
     function gameOver() {
         isPaused = true;
-        finalScoreElement.innerText = player.score;
-        gameOverModal.style.display = 'block';
+        document.getElementById('final-score').innerText = player.score;
+        document.getElementById('game-over').style.display = 'flex';
     }
 
-    function resetGame() {
-        arena.forEach(row => row.fill(0));
-        player.score = 0;
-        updateScore();
-        isPaused = false;
-        gameOverModal.style.display = 'none';
-        playerReset();
-        update();
-    }
-
-    // ВІДПРАВКА ДАНИХ В БОТА
     function sendScoreAndClose() {
         const data = JSON.stringify({
-            score: player.score
+            score: player.score,
+            type: gameType
         });
-        tg.sendData(data); // Відправляє дані боту і закриває вікно
+        tg.sendData(data);
     }
 
-    // Обробка кнопок
-    document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); playerMove(-1); });
-    document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); playerMove(1); });
-    document.getElementById('btn-rotate').addEventListener('touchstart', (e) => { e.preventDefault(); playerRotate(1); });
-    document.getElementById('btn-down').addEventListener('touchstart', (e) => { e.preventDefault(); playerDrop(); });
+    // --- ОБРОБКА НАТИСКАНЬ (TOUCH) ---
     
-    // Клік для десктопу
-    document.getElementById('btn-left').addEventListener('click', () => playerMove(-1));
-    document.getElementById('btn-right').addEventListener('click', () => playerMove(1));
-    document.getElementById('btn-rotate').addEventListener('click', () => playerRotate(1));
-    document.getElementById('btn-down').addEventListener('click', () => playerDrop());
+    // Додаємо preventDefault, щоб кнопки не зумили і не виділяли текст
+    function bindBtn(id, action) {
+        const btn = document.getElementById(id);
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); action(); }, {passive: false});
+        btn.addEventListener('click', (e) => { action(); }); // Для тестів на ПК
+    }
 
-    playerReset();
-    updateScore();
-    update();
+    bindBtn('btn-left', () => playerMove(-1));
+    bindBtn('btn-right', () => playerMove(1));
+    bindBtn('btn-down', () => playerDrop());
+    bindBtn('btn-rotate', () => playerRotate(1));
+
+    // Клавіатура для ПК
+    document.addEventListener('keydown', event => {
+        if (isPaused) return;
+        if (event.keyCode === 37) playerMove(-1);
+        else if (event.keyCode === 39) playerMove(1);
+        else if (event.keyCode === 40) playerDrop();
+        else if (event.keyCode === 38) playerRotate(1);
+    });
 
 </script>
 </body>
