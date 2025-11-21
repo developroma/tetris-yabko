@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tetris Yabko</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background-color: #2c3e50;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            touch-action: none; /* Вимикає стандартні жести браузера */
+        }
+        canvas {
+            border: 2px solid #ecf0f1;
+            background-color: #34495e;
+            display: block;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #score-board {
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        #controls {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 300px;
+        }
+        .btn {
+            background-color: #e74c3c;
+            border: none;
+            border-radius: 10px;
+            padding: 20px;
+            color: white;
+            font-size: 24px;
+            touch-action: manipulation;
+            user-select: none;
+            active: opacity: 0.8;
+        }
+        .btn:active {
+            background-color: #c0392b;
+        }
+        #btn-rotate { grid-column: 2; background-color: #f1c40f; color: #333; }
+        #btn-down { grid-column: 2; }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 10;
+        }
+        button.main-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="score-board">Рахунок: <span id="score">0</span></div>
+    
+    <canvas id="tetris" width="240" height="400"></canvas>
+
+    <div id="controls">
+        <button class="btn" id="btn-left">⬅️</button>
+        <button class="btn" id="btn-rotate">🔄</button>
+        <button class="btn" id="btn-right">➡️</button>
+        <div></div>
+        <button class="btn" id="btn-down">⬇️</button>
+        <div></div>
+    </div>
+
+    <div id="game-over">
+        <h2>Гру закінчено!</h2>
+        <p>Твій рахунок: <span id="final-score">0</span></p>
+        <button class="main-btn" onclick="sendScoreAndClose()">Зберегти та Вийти</button>
+        <br><br>
+        <button class="main-btn" style="background:#3498db" onclick="resetGame()">Зіграти ще</button>
+    </div>
+
+<script>
+    const canvas = document.getElementById('tetris');
+    const context = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const finalScoreElement = document.getElementById('final-score');
+    const gameOverModal = document.getElementById('game-over');
+
+    context.scale(20, 20);
+
+    // Ініціалізація Telegram WebApp
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Розгортаємо на весь екран
+
+    // Логіка Тетріса
+    function arenaSweep() {
+        let rowCount = 1;
+        outer: for (let y = arena.length - 1; y > 0; --y) {
+            for (let x = 0; x < arena[y].length; ++x) {
+                if (arena[y][x] === 0) {
+                    continue outer;
+                }
+            }
+            const row = arena.splice(y, 1)[0].fill(0);
+            arena.unshift(row);
+            ++y;
+            player.score += rowCount * 10;
+            rowCount *= 2;
+        }
+    }
+
+    function collide(arena, player) {
+        const [m, o] = [player.matrix, player.pos];
+        for (let y = 0; y < m.length; ++y) {
+            for (let x = 0; x < m[y].length; ++x) {
+                if (m[y][x] !== 0 &&
+                   (arena[y + o.y] &&
+                    arena[y + o.y][x + o.x]) !== 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function createMatrix(w, h) {
+        const matrix = [];
+        while (h--) {
+            matrix.push(new Array(w).fill(0));
+        }
+        return matrix;
+    }
+
+    function createPiece(type) {
+        if (type === 'I') {
+            return [
+                [0, 1, 0, 0],
+                [0, 1, 0, 0],
+                [0, 1, 0, 0],
+                [0, 1, 0, 0],
+            ];
+        } else if (type === 'L') {
+            return [
+                [0, 2, 0],
+                [0, 2, 0],
+                [0, 2, 2],
+            ];
+        } else if (type === 'J') {
+            return [
+                [0, 3, 0],
+                [0, 3, 0],
+                [3, 3, 0],
+            ];
+        } else if (type === 'O') {
+            return [
+                [4, 4],
+                [4, 4],
+            ];
+        } else if (type === 'Z') {
+            return [
+                [5, 5, 0],
+                [0, 5, 5],
+                [0, 0, 0],
+            ];
+        } else if (type === 'S') {
+            return [
+                [0, 6, 6],
+                [6, 6, 0],
+                [0, 0, 0],
+            ];
+        } else if (type === 'T') {
+            return [
+                [0, 7, 0],
+                [7, 7, 7],
+                [0, 0, 0],
+            ];
+        }
+    }
+
+    function draw() {
+        context.fillStyle = '#34495e'; // Колір фону
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        drawMatrix(arena, {x: 0, y: 0});
+        drawMatrix(player.matrix, player.pos);
+    }
+
+    function drawMatrix(matrix, offset) {
+        matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) {
+                    context.fillStyle = colors[value];
+                    context.fillRect(x + offset.x, y + offset.y, 1, 1);
+                    context.lineWidth = 0.05;
+                    context.strokeStyle = 'white';
+                    context.strokeRect(x + offset.x, y + offset.y, 1, 1);
+                }
+            });
+        });
+    }
+
+    const colors = [
+        null,
+        '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF',
+        '#FF8E0D', '#FFE138', '#3877FF',
+    ];
+
+    const arena = createMatrix(12, 20);
+
+    const player = {
+        pos: {x: 0, y: 0},
+        matrix: null,
+        score: 0,
+    };
+
+    function playerDrop() {
+        player.pos.y++;
+        if (collide(arena, player)) {
+            player.pos.y--;
+            merge(arena, player);
+            playerReset();
+            arenaSweep();
+            updateScore();
+        }
+        dropCounter = 0;
+    }
+
+    function playerMove(dir) {
+        player.pos.x += dir;
+        if (collide(arena, player)) {
+            player.pos.x -= dir;
+        }
+    }
+
+    function playerReset() {
+        const pieces = 'ILJOTSZ';
+        player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
+        player.pos.y = 0;
+        player.pos.x = (arena[0].length / 2 | 0) -
+                       (player.matrix[0].length / 2 | 0);
+        
+        if (collide(arena, player)) {
+            gameOver();
+        }
+    }
+
+    function playerRotate(dir) {
+        const pos = player.pos.x;
+        let offset = 1;
+        rotate(player.matrix, dir);
+        while (collide(arena, player)) {
+            player.pos.x += offset;
+            offset = -(offset + (offset > 0 ? 1 : -1));
+            if (offset > player.matrix[0].length) {
+                rotate(player.matrix, -dir);
+                player.pos.x = pos;
+                return;
+            }
+        }
+    }
+
+    function rotate(matrix, dir) {
+        for (let y = 0; y < matrix.length; ++y) {
+            for (let x = 0; x < y; ++x) {
+                [
+                    matrix[x][y],
+                    matrix[y][x],
+                ] = [
+                    matrix[y][x],
+                    matrix[x][y],
+                ];
+            }
+        }
+        if (dir > 0) {
+            matrix.forEach(row => row.reverse());
+        } else {
+            matrix.reverse();
+        }
+    }
+
+    function merge(arena, player) {
+        player.matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) {
+                    arena[y + player.pos.y][x + player.pos.x] = value;
+                }
+            });
+        });
+    }
+
+    let dropCounter = 0;
+    let dropInterval = 1000;
+    let lastTime = 0;
+    let isPaused = false;
+
+    function update(time = 0) {
+        if (isPaused) return;
+
+        const deltaTime = time - lastTime;
+        lastTime = time;
+        dropCounter += deltaTime;
+        if (dropCounter > dropInterval) {
+            playerDrop();
+        }
+        draw();
+        requestAnimationFrame(update);
+    }
+
+    function updateScore() {
+        scoreElement.innerText = player.score;
+    }
+
+    function gameOver() {
+        isPaused = true;
+        finalScoreElement.innerText = player.score;
+        gameOverModal.style.display = 'block';
+    }
+
+    function resetGame() {
+        arena.forEach(row => row.fill(0));
+        player.score = 0;
+        updateScore();
+        isPaused = false;
+        gameOverModal.style.display = 'none';
+        playerReset();
+        update();
+    }
+
+    // ВІДПРАВКА ДАНИХ В БОТА
+    function sendScoreAndClose() {
+        const data = JSON.stringify({
+            score: player.score
+        });
+        tg.sendData(data); // Відправляє дані боту і закриває вікно
+    }
+
+    // Обробка кнопок
+    document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); playerMove(-1); });
+    document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); playerMove(1); });
+    document.getElementById('btn-rotate').addEventListener('touchstart', (e) => { e.preventDefault(); playerRotate(1); });
+    document.getElementById('btn-down').addEventListener('touchstart', (e) => { e.preventDefault(); playerDrop(); });
+    
+    // Клік для десктопу
+    document.getElementById('btn-left').addEventListener('click', () => playerMove(-1));
+    document.getElementById('btn-right').addEventListener('click', () => playerMove(1));
+    document.getElementById('btn-rotate').addEventListener('click', () => playerRotate(1));
+    document.getElementById('btn-down').addEventListener('click', () => playerDrop());
+
+    playerReset();
+    updateScore();
+    update();
+
+</script>
+</body>
+</html>
