@@ -3,218 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tetris Yabko</title>
+    <title>Yabko Arcade</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-color: #2c3e50;
-            --ui-bg: rgba(44, 62, 80, 0.95);
-            --accent: #f1c40f;
-            --btn-green: #27ae60;
-            --btn-blue: #2980b9;
+            --bg-color: #212121;
+            --accent: #f39c12;
+            --btn-primary: #e67e22;
+            --btn-secondary: #34495e;
+            --text-color: #ecf0f1;
         }
 
         body {
             background-color: var(--bg-color);
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            height: 100vh;
             display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
-            touch-action: none; /* Вимикає скрол і зум */
+            background: var(--bg-color);
+            z-index: 10;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
-        /* CANVAS */
+        .active { display: flex; }
+
+        h1 { margin-bottom: 5px; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; }
+        .subtitle { font-size: 14px; color: #95a5a6; margin-bottom: 30px; }
+
+        .menu-btn {
+            background: #2c3e50;
+            color: white;
+            border: 2px solid #34495e;
+            width: 100%;
+            max-width: 280px;
+            padding: 15px;
+            margin: 8px 0;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.1s, background 0.2s;
+        }
+        .menu-btn:active { transform: scale(0.98); background: #3e5871; }
+        .menu-btn span.icon { font-size: 22px; }
+
+        .profile-stats {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 280px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+        .stat-item { text-align: center; }
+        .stat-val { font-size: 20px; font-weight: bold; color: var(--accent); }
+        .stat-lbl { font-size: 12px; color: #bdc3c7; }
+
         canvas {
             border: 2px solid #34495e;
             background-color: #000;
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
-            display: none; /* Сховано до старту */
-            max-height: 65vh; /* Щоб влізло на екран разом з кнопками */
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            max-height: 60vh;
             width: auto;
         }
 
-        /* ЕКРАНИ (СТАРТ / КІНЕЦЬ) */
-        #start-screen, #game-over {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--ui-bg);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-            transition: opacity 0.3s;
-        }
+        .score-big { font-size: 48px; font-weight: bold; color: var(--accent); margin: 10px 0; }
+        .score-label { font-size: 16px; color: #bdc3c7; }
 
-        #game-over { display: none; }
-
-        h1 { font-size: 40px; margin: 0 0 20px 0; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px #000; }
-        h2 { font-size: 30px; margin-bottom: 10px; }
-
-        .stat-box {
-            background: rgba(255,255,255,0.1);
-            padding: 15px 30px;
-            border-radius: 15px;
-            margin: 10px;
-            text-align: center;
-            min-width: 150px;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .stat-label { font-size: 14px; color: #bdc3c7; text-transform: uppercase; margin-bottom: 5px; }
-        .stat-value { font-size: 32px; font-weight: bold; color: #fff; }
-
-        button.main-btn {
-            background: var(--btn-green);
+        .action-btn {
+            background: var(--btn-primary);
             color: white;
             border: none;
-            padding: 15px 50px;
-            font-size: 20px;
-            font-weight: bold;
+            padding: 15px 40px;
+            font-size: 18px;
             border-radius: 50px;
-            margin-top: 30px;
+            margin-top: 20px;
+            width: 80%;
+            max-width: 250px;
             cursor: pointer;
-            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
-            transition: transform 0.1s, background 0.2s;
+            box-shadow: 0 4px 15px rgba(230, 126, 34, 0.4);
         }
-        button.main-btn:active { transform: scale(0.95); background: #219150; }
-        button.secondary-btn { background: var(--btn-blue); margin-top: 15px; font-size: 16px; padding: 12px 30px; box-shadow: 0 5px 15px rgba(41, 128, 185, 0.4); }
+        .btn-secondary { background: var(--btn-secondary); box-shadow: none; margin-top: 10px; }
 
-        /* РАХУНОК В ГРІ */
-        #score-board {
-            display: none;
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            background: rgba(0,0,0,0.3);
-            padding: 5px 20px;
-            border-radius: 20px;
-        }
-
-        /* МОБІЛЬНЕ КЕРУВАННЯ */
         #controls {
             margin-top: 15px;
-            display: none; /* Сховано до старту */
+            display: grid;
             grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: auto auto;
             gap: 10px;
-            width: 90%;
-            max-width: 320px;
+            width: 260px;
         }
-
-        .btn {
-            background-color: rgba(255, 255, 255, 0.15);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 15px;
-            height: 60px;
+        .ctrl-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            height: 55px;
+            font-size: 24px;
             color: white;
-            font-size: 28px;
             display: flex; align-items: center; justify-content: center;
-            user-select: none;
-            touch-action: manipulation;
-            transition: background 0.1s;
         }
-        .btn:active { background-color: rgba(255, 255, 255, 0.4); }
-        
-        #btn-rotate { grid-column: 2; background-color: rgba(241, 196, 15, 0.3); border-color: var(--accent); color: var(--accent); }
-        #btn-down { grid-column: 2; grid-row: 2; }
-        #btn-left { grid-column: 1; grid-row: 2; }
-        #btn-right { grid-column: 3; grid-row: 2; }
+        .ctrl-btn:active { background: rgba(255,255,255,0.3); }
 
     </style>
 </head>
 <body>
 
-    <div id="start-screen">
-        <h1>Tetris 2000</h1>
-        <div class="stat-box">
-            <div class="stat-label">Рекорд</div>
-            <div class="stat-value" id="best-score-display">0</div>
+    <div id="screen-menu" class="screen active">
+        <h1>Arcade Hall</h1>
+        <div class="subtitle">Обери гру та встановлюй рекорди</div>
+
+        <div class="profile-stats">
+            <div class="stat-item">
+                <div class="stat-val" id="menu-best-score">0</div>
+                <div class="stat-lbl">Мій Рекорд</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-val">User</div>
+                <div class="stat-lbl">Гравець</div>
+            </div>
         </div>
-        <div class="stat-label" style="margin-top: 10px" id="mode-display">Mode: Classic</div>
-        <button class="main-btn" onclick="startGame()">ГРАТИ</button>
+
+        <button class="menu-btn" onclick="startGame('classic')">
+            <span>👾 Тетріс 2000</span>
+            <span>▶</span>
+        </button>
+        
+        <button class="menu-btn" onclick="showToast('Скоро буде!')" style="opacity: 0.6;">
+            <span>🐍 Змійка</span>
+            <span>🔒</span>
+        </button>
+        <button class="menu-btn" onclick="showToast('Скоро буде!')" style="opacity: 0.6;">
+            <span>🏎️ Гонки</span>
+            <span>🔒</span>
+        </button>
+
+        <div style="flex-grow: 1;"></div>
+        <button class="menu-btn btn-secondary" onclick="closeApp()">
+            <span>🔙 Вихід в бот</span>
+        </button>
     </div>
 
-    <div id="score-board">💎 <span id="score">0</span></div>
-    <canvas id="tetris" width="240" height="400"></canvas>
-
-    <div id="controls">
-        <div></div>
-        <button class="btn" id="btn-rotate">↻</button>
-        <div></div>
-        <button class="btn" id="btn-left">⬅️</button>
-        <button class="btn" id="btn-down">⬇️</button>
-        <button class="btn" id="btn-right">➡️</button>
+    <div id="screen-game" class="screen">
+        <div style="display: flex; justify-content: space-between; width: 240px; margin-bottom: 10px;">
+            <span>Score: <b id="game-score">0</b></span>
+            <span style="color: #e74c3c; cursor: pointer;" onclick="gameOver()">End</span>
+        </div>
+        <canvas id="tetris" width="240" height="400"></canvas>
+        
+        <div id="controls">
+            <div></div>
+            <div class="ctrl-btn" id="btn-rotate">↻</div>
+            <div></div>
+            <div class="ctrl-btn" id="btn-left">⬅️</div>
+            <div class="ctrl-btn" id="btn-down">⬇️</div>
+            <div class="ctrl-btn" id="btn-right">➡️</div>
+        </div>
     </div>
 
-    <div id="game-over">
+    <div id="screen-result" class="screen">
         <h2>GAME OVER</h2>
-        <div class="stat-box">
-            <div class="stat-label">Твій рахунок</div>
-            <div class="stat-value" id="final-score">0</div>
-        </div>
-        <button class="main-btn" onclick="sendScoreAndClose()">Зберегти</button>
-        <button class="main-btn secondary-btn" onclick="location.reload()">Зіграти ще</button>
+        <div class="score-label">Твій результат</div>
+        <div class="score-big" id="result-score">0</div>
+        
+        <div class="score-label" id="new-record-label" style="color: #2ecc71; display: none;">🏆 Новий Рекорд!</div>
+
+        <button class="action-btn" onclick="startGame('classic')">🔄 Зіграти ще раз</button>
+        <button class="action-btn btn-secondary" onclick="goToMenu()">☰ Меню ігор</button>
+        <button class="action-btn" style="background: #27ae60; margin-top: 30px;" onclick="saveAndExit()">💾 Зберегти і Вийти</button>
     </div>
 
 <script>
-    // --- ІНІЦІАЛІЗАЦІЯ TELEGRAM ---
     const tg = window.Telegram.WebApp;
-    tg.expand(); // Розгортаємо на весь екран
-    tg.disableVerticalSwipes(); // Забороняємо свайпи (щоб не закрити випадково)
+    tg.expand();
+    tg.disableVerticalSwipes();
 
-    // Отримуємо дані з URL
     const urlParams = new URLSearchParams(window.location.search);
-    const gameType = urlParams.get('type') || 'classic';
-    const bestScore = urlParams.get('best') || 0;
+    let bestScore = parseInt(urlParams.get('best')) || 0;
+    
+    document.getElementById('menu-best-score').innerText = bestScore;
 
-    // Налаштовуємо UI
-    document.getElementById('best-score-display').innerText = bestScore;
-    document.getElementById('mode-display').innerText = `Mode: ${gameType.toUpperCase()}`;
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
 
-    // --- НАЛАШТУВАННЯ ГРИ ---
+    function goToMenu() {
+        showScreen('screen-menu');
+    }
+
+    function closeApp() {
+        tg.close();
+    }
+
+    function showToast(msg) {
+        tg.showPopup({title: 'Info', message: msg});
+    }
+
+    function saveAndExit() {
+        const data = JSON.stringify({
+            score: player.score,
+            type: 'classic'
+        });
+        tg.sendData(data);
+    }
+
     const canvas = document.getElementById('tetris');
     const context = canvas.getContext('2d');
-    const scoreElement = document.getElementById('score');
-    
-    context.scale(20, 20); // Масштабуємо (240/20 = 12 блоків ширини, 400/20 = 20 блоків висоти)
-
-    // Кольори фігур
-    const colors = [
-        null,
-        '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF',
-        '#FF8E0D', '#FFE138', '#3877FF',
-    ];
-
-    // Логіка швидкості
-    let dropInterval = 1000;
-    if (gameType === 'speed') dropInterval = 400;
-    if (gameType === 'hard') dropInterval = 200;
-
-    let dropCounter = 0;
-    let lastTime = 0;
-    let isPaused = true;
+    context.scale(20, 20);
 
     const arena = createMatrix(12, 20);
+    const player = { pos: {x: 0, y: 0}, matrix: null, score: 0 };
     
-    const player = {
-        pos: {x: 0, y: 0},
-        matrix: null,
-        score: 0,
-    };
-
-    // --- ФУНКЦІЇ ДВИГУНА ---
+    let dropCounter = 0;
+    let dropInterval = 1000;
+    let lastTime = 0;
+    let isPaused = true;
+    let animationId = null;
 
     function createMatrix(w, h) {
         const matrix = [];
-        while (h--) {
-            matrix.push(new Array(w).fill(0));
-        }
+        while (h--) matrix.push(new Array(w).fill(0));
         return matrix;
     }
 
@@ -228,11 +254,11 @@
         if (type === 'T') return [[0, 7, 0],[7, 7, 7],[0, 0, 0]];
     }
 
+    const colors = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
+
     function draw() {
-        // Очищення
         context.fillStyle = '#000';
         context.fillRect(0, 0, canvas.width, canvas.height);
-
         drawMatrix(arena, {x: 0, y: 0});
         drawMatrix(player.matrix, player.pos);
     }
@@ -243,9 +269,8 @@
                 if (value !== 0) {
                     context.fillStyle = colors[value];
                     context.fillRect(x + offset.x, y + offset.y, 1, 1);
-                    // Ефект об'єму
                     context.lineWidth = 0.05;
-                    context.strokeStyle = 'rgba(255,255,255,0.5)';
+                    context.strokeStyle = 'white';
                     context.strokeRect(x + offset.x, y + offset.y, 1, 1);
                 }
             });
@@ -277,8 +302,7 @@
         const o = player.pos;
         for (let y = 0; y < m.length; ++y) {
             for (let x = 0; x < m[y].length; ++x) {
-                if (m[y][x] !== 0 &&
-                   (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) {
+                if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) {
                     return true;
                 }
             }
@@ -295,11 +319,10 @@
             const row = arena.splice(y, 1)[0].fill(0);
             arena.unshift(row);
             ++y;
-
             player.score += rowCount * 10;
             rowCount *= 2;
         }
-        scoreElement.innerText = player.score;
+        document.getElementById('game-score').innerText = player.score;
     }
 
     function playerReset() {
@@ -307,7 +330,6 @@
         player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
         player.pos.y = 0;
         player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
-
         if (collide(arena, player)) {
             gameOver();
         }
@@ -348,73 +370,55 @@
 
     function update(time = 0) {
         if (isPaused) return;
-        
         const deltaTime = time - lastTime;
         lastTime = time;
-        
         dropCounter += deltaTime;
         if (dropCounter > dropInterval) {
             playerDrop();
         }
-        
         draw();
-        requestAnimationFrame(update);
+        animationId = requestAnimationFrame(update);
     }
 
-    // --- УПРАВЛІННЯ ГРОЮ ---
-
-    function startGame() {
-        document.getElementById('start-screen').style.opacity = '0';
-        setTimeout(() => {
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('tetris').style.display = 'block';
-            document.getElementById('controls').style.display = 'grid';
-            document.getElementById('score-board').style.display = 'block';
-            
-            playerReset();
-            player.score = 0;
-            scoreElement.innerText = 0;
-            isPaused = false;
-            update();
-        }, 300);
+    function startGame(type) {
+        arena.forEach(row => row.fill(0));
+        player.score = 0;
+        document.getElementById('game-score').innerText = '0';
+        
+        showScreen('screen-game');
+        
+        playerReset();
+        isPaused = false;
+        update();
     }
 
     function gameOver() {
         isPaused = true;
-        document.getElementById('final-score').innerText = player.score;
-        document.getElementById('game-over').style.display = 'flex';
+        cancelAnimationFrame(animationId);
+        
+        document.getElementById('result-score').innerText = player.score;
+        
+        if (player.score > bestScore) {
+            bestScore = player.score;
+            document.getElementById('new-record-label').style.display = 'block';
+            document.getElementById('menu-best-score').innerText = bestScore;
+        } else {
+            document.getElementById('new-record-label').style.display = 'none';
+        }
+
+        showScreen('screen-result');
     }
 
-    function sendScoreAndClose() {
-        const data = JSON.stringify({
-            score: player.score,
-            type: gameType
-        });
-        tg.sendData(data);
-    }
-
-    // --- ОБРОБКА НАТИСКАНЬ (TOUCH) ---
-    
-    // Додаємо preventDefault, щоб кнопки не зумили і не виділяли текст
     function bindBtn(id, action) {
         const btn = document.getElementById(id);
         btn.addEventListener('touchstart', (e) => { e.preventDefault(); action(); }, {passive: false});
-        btn.addEventListener('click', (e) => { action(); }); // Для тестів на ПК
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); action(); }); 
     }
 
     bindBtn('btn-left', () => playerMove(-1));
     bindBtn('btn-right', () => playerMove(1));
     bindBtn('btn-down', () => playerDrop());
     bindBtn('btn-rotate', () => playerRotate(1));
-
-    // Клавіатура для ПК
-    document.addEventListener('keydown', event => {
-        if (isPaused) return;
-        if (event.keyCode === 37) playerMove(-1);
-        else if (event.keyCode === 39) playerMove(1);
-        else if (event.keyCode === 40) playerDrop();
-        else if (event.keyCode === 38) playerRotate(1);
-    });
 
 </script>
 </body>
